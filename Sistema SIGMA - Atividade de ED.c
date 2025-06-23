@@ -136,6 +136,43 @@ int matricularAluno(tipoClasse *listaEnc, const char *nome, int *idade, char con
 
 }
 
+//Função para remover o aluno de certa turma
+int removerAluno(tipoClasse *listaEnc,  char const *matricula){
+	if(listaEnc->inicio == NULL){ //Checagem caso a turma já esteja vazia
+		printf("A turma atual ja esta vazia!");
+		return 0;
+	}
+	
+	tipoAluno *atual = listaEnc->inicio; //Estabelecimento de ponteiros auxiliares para a procura
+	tipoAluno *anterior = NULL;
+	
+	while(atual != NULL && strcmp(atual->matricula, matricula) != 0){ //Loop de procura
+		anterior = atual;
+		atual = atual->prox;
+	}
+	
+	if(atual == NULL){ //Para caso o programa nao encontre a matrícula fornercida
+		printf("O aluno com esta matricula nao foi encontrado\n");
+		return 0;
+	}
+	
+	if(anterior == NULL){ //No caso de o aluno ser o inicio, ou seja, o elemento anterior nao existe
+		listaEnc->inicio = atual->prox;
+		if(listaEnc->quantAlunos == 1){
+			listaEnc->fim = NULL;
+		}
+	} else if(atual->prox == NULL){ //No caso do aluno ser o fim, ou seja, o proximo elemento nao existe
+		listaEnc->fim = anterior;
+		anterior->prox = NULL;
+	  } else{ //Caso geral
+		  anterior->prox = atual->prox;
+		}
+	
+	free(atual); //Liberaçao da memória
+	listaEnc->quantAlunos--;
+	return 1;
+}
+
 /*Função que faz pesquisa sequencial para achar uma classe */
 tipoClasse* pesqClasse(tipoListaClasses *listaEnc, const char *turma, const char *serie, const char *etapa){
     tipoClasse *atual;  //Variável que será usada para percorrer a lista*/
