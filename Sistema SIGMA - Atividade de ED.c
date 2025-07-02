@@ -1,5 +1,5 @@
 /*
-                    Cabeçalho
+                    Cabeçalho do trabalho
 
 G7 - TEMA 5
 
@@ -25,8 +25,7 @@ O programa deve ter as seguintes funcionalidades.
     • Matricular aluno em determinada classe
     • Remover aluno de classe
     • Exibir listagem de alunos matriculados em uma classe
-    • Exibir lista de classes (com quantitativo de alunos matriculados em cada uma
-    delas e nome do professor)
+    • Exibir lista de classes (com quantitativo de alunos matriculados em cada uma delas e nome do professor)
     • Remover classe (só é possível se não tiver alunos matriculados nela)
     • Pesquisar e exibir qual a classe de um aluno
     Obs: Com relação às informações das classes as séries podem ser 1o, 2o e etc. As turmas
@@ -34,10 +33,15 @@ O programa deve ter as seguintes funcionalidades.
 
 */
 
+/***************** Importação das bibliotecas *****************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+/***************** Declaração das structs *****************/
+
+// Estrutura para representar um aluno
 typedef struct aluno{
     char nome[50];
     int idade;
@@ -45,34 +49,47 @@ typedef struct aluno{
     struct aluno *prox;
 } tipoAluno;
 
+// Estrutura para representar uma classe (turma)
 typedef struct classe{
     char serie[5];
     char turma;
     char etapa[20];
     int quantAlunos;
     char nomeProf[50];
-    tipoAluno *inicio, *fim;
-    struct classe *ant;
-    struct classe *prox;
+    tipoAluno *inicio, *fim; // Lista de alunos da classe
+    struct classe *ant;  // Ponteiro para a classe anterior
+    struct classe *prox; // Ponteiro para a próxima classe
 } tipoClasse;
 
+// Estrutura para gerenciar a lista de classes principal
 typedef struct listaClasses{
     tipoClasse *inicio, *fim;
     int quant;
 } tipoListaClasses;
 
-/* Função para inicializar as listas (inicializar os ponteiros com os devidos valores NULL ou 0)*/
+
+/***************** Funções Auxiliares *****************/
+
+/* Limpa o buffer de entrada, removendo caracteres residuais como '\n' */
+void clearBuffer() {
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF);
+}
+
+/***************** Funções de Gerenciamento de Classes *****************/
+
+/* Inicializa a lista de classes como vazia */
 void inicializaListaClasses(tipoListaClasses *listaClasses){
     listaClasses->inicio = NULL;
     listaClasses->fim = NULL;
     listaClasses->quant = 0;
-} 
+}
 
-/* Função para cadastrar uma classe, caso não tenha nenhum elemento na classe */
-int cadastrarClasseVazia(tipoListaClasses *listaClasses, char serie[5], char turma, char etapa[20], char nomeProf[50]){
+/* Cadastra a primeira classe quando a lista está vazia */
+int cadastrarClasseVazia(tipoListaClasses *listaClasses, const char *serie, char turma, const char *etapa, const char *nomeProf){
     tipoClasse *classe = (tipoClasse*) malloc (sizeof(tipoClasse));
     if(classe == NULL){
-        printf("Erro na alocacao de memoria!");
+        printf("Erro na alocacao de memoria para a classe!\n");
         return 0;
     }
     strcpy(classe->serie, serie);
@@ -84,21 +101,33 @@ int cadastrarClasseVazia(tipoListaClasses *listaClasses, char serie[5], char tur
     classe->inicio = NULL;
     classe->fim = NULL;
     classe->quantAlunos = 0;
+
     listaClasses->inicio = classe;
     listaClasses->fim = classe;
     listaClasses->quant++;
+    printf("Classe %s %c %s cadastrada com sucesso!\n", classe->serie, classe->turma, classe->etapa);
     return 1;
 }
 
-/* Função para cadastrar uma nova classe no sistema, que já tenha ao menos um elemento */
-int cadastrarClasse(tipoListaClasses *listaClasses, char serie[5], char turma, char etapa[20], char nomeProf[50]){
-    if(listaClasses->quant == 0){                                                 // Verificação se já tem alguma coisa na lista,
-        return cadastrarClasseVazia(listaClasses, serie, turma, etapa, nomeProf); // se não tiver elementos, basta inicializar a lista,
+/* Cadastra uma nova classe, verificando duplicatas */
+int cadastrarClasse(tipoListaClasses *listaClasses, const char *serie, char turma, const char *etapa, const char *nomeProf){
+    if(listaClasses->quant == 0){
+        return cadastrarClasseVazia(listaClasses, serie, turma, etapa, nomeProf);
     }
-    else{                                                                         // se tiver, começa a alocação de memória para mais um elemento
-        tipoClasse *classe = (tipoClasse*) malloc (sizeof(tipoClasse)); 
+    else{
+        // Verifica se a classe já existe
+        tipoClasse *temp = listaClasses->inicio;
+        while (temp != NULL) {
+            if (strcmp(temp->serie, serie) == 0 && temp->turma == turma && strcmp(temp->etapa, etapa) == 0) {
+                printf("Classe %s %c %s ja existe!\n", serie, turma, etapa);
+                return 0;
+            }
+            temp = temp->prox;
+        }
+
+        tipoClasse *classe = (tipoClasse*) malloc (sizeof(tipoClasse));
         if(classe == NULL){
-            printf("Erro na alocacao de memoria!");
+            printf("Erro na alocacao de memoria para a classe!\n");
             return 0;
         }
         strcpy(classe->serie, serie);
@@ -110,54 +139,448 @@ int cadastrarClasse(tipoListaClasses *listaClasses, char serie[5], char turma, c
         classe->inicio = NULL;
         classe->fim = NULL;
         classe->quantAlunos = 0;
+
         listaClasses->fim->prox = classe;
         listaClasses->fim = classe;
         listaClasses->quant++;
+        printf("Classe %s %c %s cadastrada com sucesso!\n", classe->serie, classe->turma, classe->etapa);
         return 1;
     }
 }
 
+/* Pesquisa e retorna um ponteiro para a classe se encontrada */
+tipoClasse* pesqClasse(tipoListaClasses *listaEnc, const char *serie, char turma, const char *etapa){
+    tipoClasse *atual;
+    if(listaEnc->inicio == NULL) {
+        printf("Nenhuma classe cadastrada para pesquisa.\n");
+        return NULL;
+    }
+
+    atual = listaEnc->inicio;
+    while(atual != NULL){
+        if((strcmp(serie, atual->serie) == 0) && (turma == atual->turma) && (strcmp(etapa, atual->etapa) == 0)){
+            return atual;
+        }
+        atual = atual->prox;
+    }
+    printf("Classe '%s %c %s' nao encontrada.\n", serie, turma, etapa);
+    return NULL;
+}
+
+/* Exibe todas as classes cadastradas no sistema */
+int exibeClasses(tipoListaClasses *listaEnc){
+    tipoClasse *atual;
+    if(listaEnc->inicio == NULL) {
+        printf("\nNenhuma classe cadastrada.\n");
+        return 0;
+    } else {
+        atual = listaEnc->inicio;
+        printf("\n--- Lista de Classes Cadastradas ---\n");
+        while(atual != NULL){
+            printf("\n- Serie: %s\n- Turma: %c\n- Etapa: %s\n- Quantidade de alunos: %d\n- Nome do professor: %s\n",
+                   atual->serie, atual->turma, atual->etapa, atual->quantAlunos, atual->nomeProf);
+            atual = atual->prox;
+        }
+        printf("------------------------------------\n");
+        return 1;
+    }
+}
+
+/* Remove uma classe da lista principal */
+int remocaoDeClasses(tipoListaClasses *lista, tipoClasse *noRemover) {
+    if (lista->inicio == NULL || noRemover == NULL) {
+        printf("Lista de classes vazia ou classe a remover invalida.\n");
+        return 0;
+    }
+
+    if (noRemover->quantAlunos > 0) {
+        printf("\nNao e possivel remover classes com alunos matriculados. Remova todos os alunos antes de fazer essa operacao.\n");
+        return 0;
+    }
+
+    // Lógica para remoção em lista duplamente encadeada
+    if (lista->inicio == noRemover && lista->fim == noRemover) { // Caso: único elemento
+        lista->inicio = NULL;
+        lista->fim = NULL;
+    } else {
+        if (noRemover->ant != NULL) { // Não é o primeiro elemento
+            noRemover->ant->prox = noRemover->prox;
+        } else { // É o primeiro elemento
+            lista->inicio = noRemover->prox;
+        }
+
+        if (noRemover->prox != NULL) { // Não é o último elemento
+            noRemover->prox->ant = noRemover->ant;
+        } else { // É o último elemento
+            lista->fim = noRemover->ant;
+        }
+    }
+
+    // Libera a lista de alunos da classe (deve estar vazia neste ponto devido à verificação)
+    tipoAluno *atualAluno = noRemover->inicio;
+    while (atualAluno != NULL) {
+        tipoAluno *tempAluno = atualAluno;
+        atualAluno = atualAluno->prox;
+        free(tempAluno);
+    }
+
+    free(noRemover);
+    lista->quant--;
+    printf("Classe removida com sucesso!\n");
+    return 1;
+}
+
+/***************** Funções de Gerenciamento de Alunos *****************/
+
+/* Matricula um novo aluno em uma classe específica */
+int matricularAluno(tipoClasse *classeAtual, const char *nome, int idade, const char *matricula) {
+    if (classeAtual == NULL) {
+        printf("Classe invalida para matricula de aluno.\n");
+        return 0;
+    }
+
+    tipoAluno *novoAluno = (tipoAluno*) malloc(sizeof(tipoAluno));
+    if (novoAluno == NULL) {
+        printf("Erro na alocacao de memoria para o aluno!\n");
+        return 0;
+    }
+
+    strcpy(novoAluno->nome, nome);
+    novoAluno->idade = idade;
+    strcpy(novoAluno->matricula, matricula);
+    novoAluno->prox = NULL;
+
+    // Verifica se a matrícula já existe nesta classe
+    tipoAluno *temp = classeAtual->inicio;
+    while (temp != NULL) {
+        if (strcmp(temp->matricula, matricula) == 0) {
+            printf("Matricula %s ja existente para esta classe, por favor tente cadastrar o aluno novamente.\n", matricula);
+            free(novoAluno);
+            return 0;
+        }
+        temp = temp->prox;
+    }
+
+    // Adiciona o aluno na lista da classe
+    if (classeAtual->inicio == NULL) { // Se a lista de alunos da classe estiver vazia
+        classeAtual->inicio = novoAluno;
+        classeAtual->fim = novoAluno;
+    } else { // Se já houver alunos na classe
+        classeAtual->fim->prox = novoAluno;
+        classeAtual->fim = novoAluno;
+    }
+
+    classeAtual->quantAlunos++;
+    printf("Aluno %s matriculado com sucesso na classe %s %c %s!\n", nome, classeAtual->serie, classeAtual->turma, classeAtual->etapa);
+    return 1;
+}
+
+/* Remove um aluno de uma classe específica pela matrícula */
+int removerAluno(tipoClasse *classeAtual, const char *matricula){
+    if(classeAtual == NULL || classeAtual->inicio == NULL){
+        printf("A turma atual esta vazia ou e invalida!\n");
+        return 0;
+    }
+
+    tipoAluno *atual = classeAtual->inicio;
+    tipoAluno *anterior = NULL;
+
+    // Percorre a lista de alunos para encontrar o aluno
+    while(atual != NULL && strcmp(atual->matricula, matricula) != 0){
+        anterior = atual;
+        atual = atual->prox;
+    }
+
+    if(atual == NULL){
+        printf("O aluno com a matricula '%s' nao foi encontrado nesta classe.\n", matricula);
+        return 0;
+    }
+
+    // Lógica para remover o aluno encontrado
+    if(anterior == NULL){ // Se é o primeiro aluno
+        classeAtual->inicio = atual->prox;
+        if(classeAtual->inicio == NULL){
+            classeAtual->fim = NULL;
+        }
+    } else { // Se não é o primeiro
+        anterior->prox = atual->prox;
+        if(atual->prox == NULL){
+            classeAtual->fim = anterior;
+        }
+    }
+
+    printf("Aluno %s com matricula %s removido com sucesso da classe.\n", atual->nome, atual->matricula);
+    free(atual);
+    classeAtual->quantAlunos--;
+    return 1;
+}
+
+/* Função para exibir listagem de alunos matriculados em uma classe */
+void exibirAlunosDaClasse(tipoListaClasses *lista, char serie[5], char turma, char etapa[20]) {
+    tipoClasse *classe;
+
+    // Percorre a lista de classes procurando pela classe com a série e turma informadas
+    for (classe = lista->inicio; classe != NULL; classe = classe->prox) {
+        // Verifica se a classe atual corresponde à série e turma buscadas
+        if (strcmp(classe->serie, serie) == 0 && classe->turma == turma && strcmp(classe->etapa,etapa) == 0) {
+            printf("\n Alunos da Classe %s - %c (%s)\n", classe->serie, classe->turma, classe->etapa);
+
+            // Verifica se a lista de alunos está vazia
+            if (classe->inicio == NULL) {
+                printf("Nenhum aluno matriculado nesta classe.\n");
+                return;
+            }
+
+            tipoAluno *aluno;
+            int cont = 1;     // Contador para numerar os alunos exibidos
+
+            // Percorre a lista de alunos da classe
+            for (aluno = classe->inicio; aluno != NULL; aluno = aluno->prox) {
+                // Exibe os dados do aluno atual
+                printf("%d. Nome: %s | Idade: %d | Matrícula: %s\n",
+                       cont++, aluno->nome, aluno->idade, aluno->matricula);
+            }
+            return; // Encerra a função após listar os alunos
+        }
+    }
+
+    // Caso nenhuma classe com a série e turma informadas seja encontrada
+    printf("\n Classe %s - %c nao encontrada.\n", serie, turma);
+}
+
+/* Função para pesquisar um aluno nas classes usando a matrícula como chave de busca */
+void pesquisarClasseDoAluno(tipoListaClasses *lista, const char *matricula) {
+    // Verifica se há classes cadastradas para pesquisar
+    if (lista->inicio == NULL) {
+        printf("Nenhuma classe cadastrada no sistema.\n");
+        return;
+    }
+
+    tipoClasse *classeAtual;
+    tipoAluno *alunoAtual;
+
+    // Laço externo: percorre a lista de classes
+    for (classeAtual = lista->inicio; classeAtual != NULL; classeAtual = classeAtual->prox) {
+        // Laço interno: percorre a lista de alunos da classe atual
+        for (alunoAtual = classeAtual->inicio; alunoAtual != NULL; alunoAtual = alunoAtual->prox) {
+            // Compara a matrícula do aluno atual com a matrícula buscada
+            if (strcmp(alunoAtual->matricula, matricula) == 0) {
+                // Se encontrar, exibe as informações e encerra a função
+                printf("\n Aluno encontrado!\n");
+                printf("Nome: %s (Matricula: %s)\n", alunoAtual->nome, alunoAtual->matricula);
+                printf("Pertence a Classe: %s %c - %s (Professor(a): %s)\n",
+                       classeAtual->serie, classeAtual->turma, classeAtual->etapa, classeAtual->nomeProf);
+                return; // Encerra a busca assim que o aluno é encontrado
+            }
+        }
+    }
+
+    // Se os laços terminarem e a função não tiver retornado, o aluno não foi encontrado
+    printf("\n Aluno com matricula '%s' nao foi encontrado em nenhuma classe.\n", matricula);
+}
+
+/***************** Função Principal (Main) *****************/
+
 int main() {
+    tipoListaClasses listaClasses;
+    inicializaListaClasses(&listaClasses);
 
-    tipoListaClasses listaClasses; // Criação da lista que será passada nas funções de manipulação de nós cabeça com as classes das matérias
-    inicializaListaClasses(&listaClasses); // Alocando o espaço na memória para essa lista
-    tipoClasse classe; // Criação da lista que contém as informações dos alunos
+    // Variável auxiliar para a classe encontrada após pesquisa.
+    tipoClasse *auxClasse;
 
-    int op; // Variável para controle do switch
+    int op; // Opção do menu escolhida pelo usuário.
 
+    // Variáveis locais para entrada de dados.
+    char serie[5];
+    char turma;
+    char etapa[20];
+    char nomeProf[50];
+    char nome[50];
+    int idade;
+    char matricula[30];
+
+    // Loop principal do menu, continua até o usuário escolher sair (opção 0).
     do {
         printf("\n---- Bem vindo ao menu inicial do SIGMA ----");
         printf("\n\n        Menu inical");
-        printf("\n 1 - Cadastrar nova classe no sistema");
-        printf("\n 0 - Encerar o SIGMA");
+        printf("\n 1 - Cadastrar nova classe no sistema;");
+        printf("\n 2 - Cadastrar novo aluno no sistema;");
+        printf("\n 3 - Exibir todas as classes cadastradas no sistema;");
+        printf("\n 4 - Excluir aluno de uma classe;");
+        printf("\n 5 - Excluir uma classe;");
+        printf("\n 6 - Exibir alunos de uma classe;");
+        printf("\n 7 - Pesquisar e exibir qual a classe de um aluno;");
+        printf("\n 0 - Encerrar o SIGMA.");
 
-        printf("\nDigite sua opção:");
+        printf("\nDigite sua opcao: ");
         scanf("%d",&op);
+        // Chamada para clearBuffer() após a leitura de 'op' (int) para limpar o '\n' pendente.
+        clearBuffer();
 
         switch (op) {
+            case 1: // Cadastrar nova classe
+                printf("\nDigite a serie da classe (ex: 1o, 2o e etc): ");
+                // Uso de fgets para ler strings com espaços e evitar problemas de buffer.
+                fgets(serie, sizeof(serie), stdin);
+                // strcspn é usado para encontrar e remover o caractere de nova linha ('\n') adicionado por fgets.
+                serie[strcspn(serie, "\n")] = 0;
+                printf("\nDigite a turma da classe (ex: A, B, C e etc): ");
+                // O espaço antes de %c em scanf(" %c", ...) serve para consumir qualquer caractere de espaço em branco (incluindo '\n') que possa ter ficado no buffer antes da leitura da turma.
+                scanf(" %c", &turma);
+                clearBuffer();
 
-            case 1: 
-                printf("Digite a serie da classe(ex: 1º, 2º e etc): ");
-                fgets(classe.serie, sizeof(classe.serie), stdin);
-                classe.serie[strlen(classe.serie) - 1] = '\0';
-                printf("Digite a turma da classe(ex: A, B, C e etc): ");
-                scanf(" %c", &classe.turma);
-                getchar();
-                printf("Digite a etapa da classe(Fundamental I, Fundamental II e Médio): ");
-                fgets(classe.etapa, sizeof(classe.etapa), stdin);
-                classe.etapa[strlen(classe.etapa) - 1] = '\0';
-                printf("Digite o nome do professor da classe: ");
-                fgets(classe.nomeProf, sizeof(classe.nomeProf), stdin);
-                classe.nomeProf[strlen(classe.nomeProf) - 1] = '\0';
-                if(cadastrarClasse(&listaClasses, classe.serie, classe.turma, classe.etapa, classe.nomeProf)){
-                    printf("Serie: %s\nTurma: %c\nEtapa: %s\nNome do professor: %s\nQuantidade de classes: %d", listaClasses.inicio->serie, listaClasses.inicio->turma, listaClasses.inicio->etapa, listaClasses.inicio->nomeProf, listaClasses.quant);
+                printf("\nDigite a etapa da classe (Fundamental I, Fundamental II e Medio): ");
+                fgets(etapa, sizeof(etapa), stdin);
+                etapa[strcspn(etapa, "\n")] = 0;
+
+                printf("\nDigite o nome do professor da classe: ");
+                fgets(nomeProf, sizeof(nomeProf), stdin);
+                nomeProf[strcspn(nomeProf, "\n")] = 0;
+
+                cadastrarClasse(&listaClasses, serie, turma, etapa, nomeProf);
+            break;
+
+            case 2: // Cadastrar novo aluno
+                printf("\nSelecione a turma em que deseja cadastrar o aluno:\n");
+                printf("\nDigite a serie: ");
+                fgets(serie, sizeof(serie), stdin);
+                serie[strcspn(serie, "\n")] = 0;
+
+                printf("\nDigite a turma: ");
+                scanf(" %c", &turma);
+                clearBuffer();
+
+                printf("\nDigite a etapa: ");
+                fgets(etapa, sizeof(etapa), stdin);
+                etapa[strcspn(etapa, "\n")] = 0;
+
+                // Tenta encontrar a classe usando os dados fornecidos pelo usuário.
+                auxClasse = pesqClasse(&listaClasses, serie, turma, etapa);
+
+                if (auxClasse != NULL){ // Se a classe foi encontrada, procede com o cadastro do aluno.
+                    printf("\nDigite o nome do aluno: ");
+                    fgets(nome, sizeof(nome), stdin);
+                    nome[strcspn(nome, "\n")] = 0;
+
+                    printf("\nDigite a idade do aluno: ");
+                    scanf("%d", &idade);
+                    // Chamada para clearBuffer() após a leitura de 'idade' (int). Essencial para que o próximo fgets funcione corretamente.
+                    clearBuffer();
+
+                    printf("\nDigite a matricula do aluno: ");
+                    fgets(matricula, sizeof(matricula), stdin);
+                    matricula[strcspn(matricula, "\n")] = 0;
+
+                    // A função matricularAluno agora espera 'idade' como um int direto, não um ponteiro.
+                    matricularAluno(auxClasse, nome, idade, matricula);
+                } else { // Se a classe não foi encontrada.
+                    printf("\nAluno nao cadastrado, a classe especificada nao existe.\n");
                 }
             break;
 
-    } // Fim do switch
+            case 3: // Exibir todas as classes
+                exibeClasses(&listaClasses);
+            break;
 
-    } while (op != 0); // Fim doa do-while
+            case 4: // Excluir aluno de uma classe
+                printf("\nSelecione a turma da qual deseja excluir o aluno:\n");
+                printf("\nDigite a serie: ");
+                fgets(serie, sizeof(serie), stdin);
+                serie[strcspn(serie, "\n")] = 0;
+
+                printf("\nDigite a turma: ");
+                scanf(" %c", &turma);
+                clearBuffer();
+
+                printf("\nDigite a etapa: ");
+                fgets(etapa, sizeof(etapa), stdin);
+                etapa[strcspn(etapa, "\n")] = 0;
+
+                // Tenta encontrar a classe do aluno a ser excluído.
+                auxClasse = pesqClasse(&listaClasses, serie, turma, etapa);
+
+                if (auxClasse != NULL){ // Se a classe foi encontrada.
+                    printf("\nDigite a matricula do aluno a ser removido: ");
+                    fgets(matricula, sizeof(matricula), stdin);
+                    matricula[strcspn(matricula, "\n")] = 0;
+
+                    removerAluno(auxClasse, matricula);
+                } else { // Se a classe não foi encontrada.
+                    printf("\nAluno nao excluido, a classe especificada nao existe.\n");
+                }
+            break;
+
+            case 5: // Excluir uma classe
+                if (listaClasses.quant == 0) { // Verifica se há classes para excluir antes de prosseguir.
+                    printf("\nNenhuma classe para excluir.\n");
+                    break;
+                }
+                exibeClasses(&listaClasses); // Exibe as classes para que o usuário saiba quais pode remover.
+                printf("\nSelecione a classe que deseja excluir:\n");
+                printf("\nDigite a serie: ");
+                fgets(serie, sizeof(serie), stdin);
+                serie[strcspn(serie, "\n")] = 0;
+
+                printf("\nDigite a turma: ");
+                scanf(" %c", &turma);
+                clearBuffer();
+
+                printf("\nDigite a etapa: ");
+                fgets(etapa, sizeof(etapa), stdin);
+                etapa[strcspn(etapa, "\n")] = 0;
+
+                // Tenta encontrar a classe a ser excluída.
+                auxClasse = pesqClasse(&listaClasses, serie, turma, etapa);
+
+                if (auxClasse != NULL){ // Se a classe foi encontrada.
+                    // A função de remoção de classes agora espera o ponteiro 'auxClasse' diretamente.
+                    remocaoDeClasses(&listaClasses, auxClasse);
+                } else { // Se a classe não foi encontrada.
+                    printf("\nClasse nao excluida, a classe especificada nao existe.\n");
+                }
+            break;
+
+            case 6:
+
+                printf("\n--- Exibir Alunos de uma Classe ---\n");
+
+                // Solicita ao usuário a série da classe
+                printf("Digite a série da classe que deseja visualizar: ");
+                printf("\nDigite a serie: ");
+                fgets(serie, sizeof(serie), stdin);
+                serie[strcspn(serie, "\n")] = 0;
+
+                printf("\nDigite a turma: ");
+                scanf(" %c", &turma);
+                clearBuffer();
+
+                printf("\nDigite a etapa: ");
+                fgets(etapa, sizeof(etapa), stdin);
+                etapa[strcspn(etapa, "\n")] = 0;
+
+                // Chama a função que você criou, passando a lista e os dados lidos
+                exibirAlunosDaClasse(&listaClasses, serie, turma, etapa);
+
+            break;
+            case 7: // Pesquisar e exibir qual a classe de um aluno
+                printf("\n--- Pesquisar Classe de um Aluno ---\n");
+                printf("Digite a matrícula do aluno a ser pesquisado: ");
+                fgets(matricula, sizeof(matricula), stdin);
+                matricula[strcspn(matricula, "\n")] = '\0'; // Remove o '\n'
+
+                // Chama a nova função para realizar a busca e exibir o resultado
+                pesquisarClasseDoAluno(&listaClasses, matricula);
+                break;
+            case 0: // Encerrar o programa
+                printf("\nEncerrando o SIGMA. Ate mais!\n");
+            break;
+
+            default: // Opção inválida
+                printf("\nOpcao invalida. Por favor, digite uma opcao valida.\n");
+            break;
+        } // Fim do switch case
+
+    } while (op != 0); // O loop continua enquanto o usuário não digitar '0'.
 
     return 0;
-    
 } // Fim do main
