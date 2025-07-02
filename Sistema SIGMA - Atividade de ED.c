@@ -328,6 +328,39 @@ int removerAluno(tipoClasse *classeAtual, const char *matricula){
     return 1;
 }
 
+/* Função para exibir listagem de alunos matriculados em uma classe */
+void exibirAlunosDaClasse(tipoListaClasses *lista, char serie[5], char turma) {
+    tipoClasse *classe;
+
+    // Percorre a lista de classes procurando pela classe com a série e turma informadas
+    for (classe = lista->inicio; classe != NULL; classe = classe->prox) {
+        // Verifica se a classe atual corresponde à série e turma buscadas
+        if (strcmp(classe->serie, serie) == 0 && classe->turma == turma) {
+            printf("\n Alunos da Classe %s - %c (%s)\n", classe->serie, classe->turma, classe->etapa);
+
+            // Verifica se a lista de alunos está vazia
+            if (classe->inicio == NULL) {
+                printf("Nenhum aluno matriculado nesta classe.\n");
+                return; 
+            }
+
+            tipoAluno *aluno; 
+            int cont = 1;     // Contador para numerar os alunos exibidos
+
+            // Percorre a lista de alunos da classe
+            for (aluno = classe->inicio; aluno != NULL; aluno = aluno->prox) {
+                // Exibe os dados do aluno atual
+                printf("%d. Nome: %s | Idade: %d | Matrícula: %s\n",
+                       cont++, aluno->nome, aluno->idade, aluno->matricula);
+            }
+            return; // Encerra a função após listar os alunos
+        }
+    }
+
+    // Caso nenhuma classe com a série e turma informadas seja encontrada
+    printf("\n Classe %s - %c não encontrada.\n", serie, turma);
+}
+
 
 
 //## Função Principal (Main)
@@ -360,6 +393,7 @@ int main() {
         printf("\n 3 - Exibir todas as classes cadastradas no sistema");
         printf("\n 4 - Excluir aluno de uma classe");
         printf("\n 5 - Excluir uma classe");
+        printf("\n 6 - Exibir alunos de uma classe");
         printf("\n 0 - Encerrar o SIGMA");
 
         printf("\nDigite sua opcao: ");
@@ -374,7 +408,6 @@ int main() {
                 fgets(serie, sizeof(serie), stdin);
                 // strcspn é usado para encontrar e remover o caractere de nova linha ('\n') adicionado por fgets.
                 serie[strcspn(serie, "\n")] = 0;
-
                 printf("\nDigite a turma da classe (ex: A, B, C e etc): ");
                 // O espaço antes de %c em scanf(" %c", ...) serve para consumir qualquer caractere de espaço em branco (incluindo '\n') que possa ter ficado no buffer antes da leitura da turma.
                 scanf(" %c", &turma);
@@ -491,6 +524,28 @@ int main() {
                 }
             break;
 
+            case 6:
+
+                printf("\n--- Exibir Alunos de uma Classe ---\n");
+
+                // 1. Solicita ao usuário a série da classe
+                printf("Digite a série da classe que deseja visualizar: ");
+                fgets(serie, sizeof(serie), stdin);
+                // Remove o '\n' que o fgets captura no final da string.
+                serie[strcspn(serie, "\n")] = '\0';
+
+                // 2. Solicita ao usuário a turma da classe
+                printf("Digite a turma (ex: A, B, C): ");
+                // A forma mais segura de ler um único caractere sem problemas de buffer
+                // é ler a linha inteira e pegar apenas o primeiro caractere.
+                char buffer_turma[10];
+                fgets(buffer_turma, sizeof(buffer_turma), stdin);
+                turma = buffer_turma[0];
+
+                // 3. Chama a função que você criou, passando a lista e os dados lidos
+                exibirAlunosDaClasse(&listaClasses, serie, turma);
+
+            break;
             case 0: // Encerrar o programa
                 printf("\nEncerrando o SIGMA. Ate mais!\n");
             break;
